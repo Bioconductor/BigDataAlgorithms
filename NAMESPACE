@@ -1,0 +1,3 @@
+importFrom("Matrix", "crossprod")
+
+export(rsvd)

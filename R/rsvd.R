@@ -7,38 +7,26 @@ rsvd <- function (A, k = NULL, nu = NULL, nv = NULL, p = 10, q = 1, sdist = "uni
 {
     m <- nrow(A)
     n <- ncol(A)
-    if (m < n) {
+    flipped <- (m < n)
+    if (flipped) {
         A <- H(A)
         m <- nrow(A)
         n <- ncol(A)
-        flipped <- TRUE
-    } else {
-        flipped <- FALSE
     }
 
     # Setting 'k'.
-    if (is.null(k)) {
-        k <- n
-    } 
+    if (is.null(k)) { k <- n } 
     k <- min(k, n)
-    if (k < 1) {
-        stop("target rank is not valid")
-    }
+    if (k < 1) { stop("target rank is not valid") }
 
     # Setting 'l'.
     l <- round(k) + round(p)
     l <- min(l, n)
-    if (l < 1) {
-        stop("target rank is not valid")
-    }
+    if (l < 1) { stop("target rank is not valid") }
 
     # Setting 'nu' and 'nv'.
-    if (is.null(nu)) {
-        nu <- k
-    }
-    if (is.null(nv)) {
-        nv <- k
-    }
+    if (is.null(nu)) { nu <- k }
+    if (is.null(nv)) { nv <- k }
     nu <- min(k, max(nu, 0))
     nv <- min(k, max(nv, 0))
 
@@ -50,21 +38,19 @@ rsvd <- function (A, k = NULL, nu = NULL, nv = NULL, p = 10, q = 1, sdist = "uni
     
     # Generating the random subspace.
     sdist <- match.arg(sdist, c("normal", "unif", "col"))
-    O <- switch(sdist, 
-                normal = matrix(stats::rnorm(l * n), n, l), 
-                unif = matrix(stats::runif(l * n), n, l), 
-                col = NULL)
-
-    if (is.complex(A)) { 
-        O <- O + switch(sdist, 
-                        normal = (0+1i) * matrix(stats::rnorm(l * n), n, l), 
-                        unif = (0+1i) * matrix(stats::runif(l * n), n, l), 
-                        col = NULL)
-    }
-
-    if (sdist == "col") {
+    if (sdist=="col") { 
         Y <- A[, sample.int(n, size = l), drop=FALSE]
     } else {
+        O <- switch(sdist, 
+                    normal = matrix(stats::rnorm(l * n), n, l), 
+                    unif = matrix(stats::runif(l * n), n, l)) 
+
+       if (is.complex(A)) { 
+           O <- O + switch(sdist, 
+                           normal = (0+1i) * matrix(stats::rnorm(l * n), n, l), 
+                           unif = (0+1i) * matrix(stats::runif(l * n), n, l)) 
+       }
+
         Y <- A %*% O
     }
 
@@ -111,21 +97,22 @@ rsvd <- function (A, k = NULL, nu = NULL, nv = NULL, p = 10, q = 1, sdist = "uni
 
 # Helper function to calculate the (conjugate) transpose.
 H <- function (X) {
-    if (is.complex(X)) {
-        return(Conj(t(X)))
-    }
-    else {
-        return(Matrix::t(X))
-    }
+    if (is.complex(X)) { X <- Conj(X) } 
+    return(t(X))
 }
 
 # Computing the cross-product efficiently.
 crossprod_help <- function (A, B) 
 {
-    if (is.complex(A)) {
-        return(Matrix::crossprod(Conj(A), B))
-    } else {
-        return(Matrix::crossprod(A, B))
-    }
+    if (is.complex(A)) { A <- Conj(A) }
+    return(crossprod(A, B))
 }
 
+# Cross products for DelayedMatrix objects.
+setMethod("crossprod", c("DelayedMatrix", "ANY"), function(x, y) {
+    t(x) %*% y          
+}) 
+
+setMethod("crossprod", c("ANY", "DelayedMatrix"), function(x, y) {
+    t(x) %*% y
+})

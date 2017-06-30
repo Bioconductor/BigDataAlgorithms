@@ -1,3 +1,3 @@
 importFrom("Matrix", "crossprod")
-
+import("DelayedArray")
 export(rsvd)
